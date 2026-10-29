@@ -1,0 +1,76 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-docintel}
+      POSTGRES_USER: ${POSTGRES_USER:-docintel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docintel-local-only}
+    ports: ["5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-docintel} -d ${POSTGRES_DB:-docintel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:latest
+    ports: ["11434:11434"]
+    volumes: ["ollama_data:/root/.ollama"]
+
+  api:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://docintel:docintel-local-only@db:5432/docintel}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      STORAGE_DIR: /data/documents
+      MODEL_CACHE_DIR: /data/models
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+    ports: ["8000:8000"]
+    volumes:
+      - documents:/data/documents
+      - model_cache:/data/models
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      ollama: {condition: service_started}
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+
+  worker:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://docintel:docintel-local-only@db:5432/docintel}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      STORAGE_DIR: /data/documents
+      MODEL_CACHE_DIR: /data/models
+    volumes:
+      - documents:/data/documents
+      - model_cache:/data/models
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=INFO"]
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports: ["5173:5173"]
+    depends_on: [api]
+
+volumes:
+  postgres_data:
+  ollama_data:
+  documents:
+  model_cache:
