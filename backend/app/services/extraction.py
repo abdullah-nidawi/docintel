@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 from app.services.chunking import TextPage
 
@@ -14,7 +14,7 @@ def extract_pages(path: Path) -> list[TextPage]:
     suffix = path.suffix.lower()
     if suffix == ".pdf":
         pages = []
-        with fitz.open(path) as document:
+        with pymupdf.open(path) as document:
             for number, page in enumerate(document, start=1):
                 text = page.get_text("text").strip()
                 if text:

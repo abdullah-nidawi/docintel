@@ -14,6 +14,7 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/pyproject.toml
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
       - run: pip install -e '.[dev]'
         working-directory: backend
       - run: ruff check app tests

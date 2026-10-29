@@ -4,14 +4,14 @@
 
 DocIntel is a zero-cost, local-first platform for uploading PDF, text, and Markdown files; extracting and indexing their contents; searching semantically; asking evidence-grounded questions; and extracting validated structured data. PostgreSQL with pgvector stores the index, sentence-transformers creates local embeddings, Ollama runs the language model, and Celery handles document processing in the background.
 
-> This repository is the software project, not a hosted service. Uploaded files and model data stay on your computer. You need Docker and enough disk space/RAM for the local models. Ollama model downloads are optional for search, but required for generated answers and extraction.
+> This repository is the software project, not a hosted service. Uploaded files and model data stay on your computer. You need Docker and enough disk space/RAM for the local models. On a 16 GB Mac, allocate about 8 GB to Colima/Docker for this full stack. Ollama model downloads are optional for search, but required for generated answers and extraction.
 
 ## Start locally
 
 1. Install Docker Desktop with Compose and Git. Python 3.12+ and Node 20+ are only needed for development outside containers.
 2. Copy `.env.example` to `.env` and adjust paths or model names if needed.
-3. Start the services: `docker compose up --build`.
-4. In another terminal, download the configured Ollama model: `docker compose exec ollama ollama pull llama3.2:3b`.
+3. Start the services: `docker-compose up --build -d` (or `docker compose up --build -d` if using the Docker Compose plugin).
+4. In another terminal, download the configured Ollama model: `docker-compose exec ollama ollama pull llama3.2:3b`.
 5. Open <http://localhost:5173>. API docs are at <http://localhost:8000/docs>.
 
 The first embedding-model use downloads `sentence-transformers/all-MiniLM-L6-v2` into the local model cache. Keep that cache and the Ollama volume to avoid repeated downloads. Initial startup can take a few minutes.
